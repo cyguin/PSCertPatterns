@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A pattern-driven adversarial battery engine scoped to the PSCertPatterns experiment. It runs structured attack sequences against objects that implement known cryptographic contracts and evaluates results against documented acceptable thresholds.
+This tool runs cryptographic attacks against PowerShell class implementations. It flips bits in ciphertext, replays nonces, truncates packages, probes boundaries, and attempts cross-key decryption. The purpose is to verify that your implementation detects and rejects these attacks correctly. Run it against code you wrote. 
 
 ## What This Is Not
 
@@ -11,9 +11,6 @@ DISCLAIMER
 
 This tool exists to validate the behavioral correctness of the cryptographic patterns implemented in PSCertPatterns. It is:
 
-- NOT a penetration testing framework
-- NOT a general-purpose security auditing tool
-- NOT a substitute for a professional cryptographic review
 - NOT suitable for use against production systems, third-party code, or any target you do not own and fully understand
 
 Do not run this against code you did not write. Do not interpret a passing score as a security guarantee. Do not use this to evaluate your bank, your employer's systems, your neighbor's NAS, or your mom's dog.
