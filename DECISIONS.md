@@ -124,3 +124,69 @@ Implementation matched expectations. All 22 slice 9 tests passed on first run wi
 
 ### Mutating registry state in tests
 The `Register` and `Deprecate` tests modify the static registry state. Tests that register/deprecate profiles clean up after themselves (e.g. resetting deprecated profiles back). However, the "Register replaces an existing profile" test permanently changes the `KdfIterations` for `AES-256-GCM` from 600000 to 999999 — this is acceptable since the registry is mutable by design and later tests check for structural properties (name, algorithm) rather than exact iteration values.
+
+## Adversarial Test Suite — Threshold Findings (2026-05-30)
+
+### AES-GCM
+- Zero-length plaintext: allowed, package size = 28 bytes (12 nonce + 16 tag + 0 ciphertext)
+- Single-byte plaintext: package size = 29 bytes
+- All nonce, tag, and ciphertext positions cause authentication failure when bit-flipped (GCM authenticates the entire ciphertext + nonce + AAD)
+- All-zero key (32 bytes): AesGcmService accepts and encrypts without error (AES-GCM does not reject weak keys)
+- All-zero plaintext: round-trips correctly
+
+### HMAC-CBC
+- Zero-length plaintext: allowed, package size = 64 bytes (16 IV + 16 ciphertext (PKCS7 full block) + 32 HMAC)
+- IV byte-flip detection confirmed: both IV byte 0 and IV byte 15 cause Decrypt to throw
+- Ciphertext tamper detection confirmed: MAC covers IV + ciphertext
+- MAC truncation (strip last byte): correctly caught
+- IV swap between two packages: both throw (MAC covers IV)
+- Wrong MAC key: correctly caught
+
+### PBKDF2
+- Minimum iteration count: none enforced by .NET — 1 iteration succeeds (caller responsibility to set sane minimum)
+- Key size minimum: 16 bytes (enforced by our validation)
+- Key size maximum: no upper limit (tested up to 64 bytes, succeeds)
+- Password length: no practical limit (tested 10000 characters, succeeds; theoretical limit is CLR object size)
+- Salt uniqueness: caller responsibility — deterministic by design for same password + salt
+- Salt minimum: 16 bytes (enforced by our validation)
+
+### Nonce Uniqueness
+- CounterNonceGenerator (10000 samples): 10000/10000 unique, confirmed monotonically increasing
+- RandomNonceGenerator (10000 samples): 10000/10000 unique with random 12-byte nonces
+- Theoretical collision probability for RandomNonceGenerator at 10000 samples: negligible (birthday bound for 96-bit random space is ~2^48)
+- Two CounterNonceGenerator instances with identical keyId produce identical first nonce (expected — both start with counter=1)
+
+### RSA
+- OAEP-SHA256 max plaintext for 2048-bit key: 190 bytes (256 - 2 - 2*32 = 190)
+- 191 bytes throws CryptographicException
+- Zero-length plaintext: allowed, round-trips correctly (encrypts to 256-byte ciphertext)
+- Zero-length data signature: allowed, verifies correctly
+- Cross-key verification: returns false (not throws)
+- Tampered signature (1-bit flip): returns false (not throws)
+
+### Key Rotation
+- Window=1: Rotate() evicts original key; Decrypt with original KeyId throws
+- Window=3: KeyCount never exceeds 3 after any number of rotations
+- Encrypt-before-Rotate pattern: with 10 rotation cycles and window=3, only 2 packages remain decryptable (because the 10th rotation's key never encrypts a package)
+- After Dispose(): `_keys` dictionary is empty (verified via direct access to hidden field)
+
+### Certificate Chain
+- Cross-PKI rejection confirmed: leaf from PKI A validated with PKI B's root returns IsValid=false
+- Expired cert with 1ms validity window: correctly detected (requires `Start-Sleep -Milliseconds 100` after creation to ensure expiry)
+- Thumbprint pinning with multiple pins: cert matching any pinned thumbprint passes
+- Empty subject "CN=": CertificateRequest accepts without error; subject is confirmed as containing "CN="
+
+### Acceptable Thresholds Summary
+
+| Pattern | Threshold | Acceptable Floor | Notes |
+|---------|-----------|-----------------|-------|
+| AES-GCM nonce | Random 12 bytes | Never reuse per key | Birthday bound ~2^48 |
+| AES-GCM key size | 256 bits | 128 bits minimum | Zero-key is accepted by API |
+| PBKDF2 iterations | 600000 | 310000 minimum (OWASP 2024) | Increase yearly |
+| PBKDF2 salt size | 32 bytes | 16 bytes minimum | Caller must ensure uniqueness |
+| RSA key size | 2048 bits | 2048 minimum | 3072 for post-2030 |
+| RSA OAEP max plaintext | 190 bytes (2048-bit) | KeySize/8 - 66 | 66 = 2 + 2*32 (SHA-256) |
+| Retention window | configurable | >= 2 recommended | Window=1 = no overlap |
+| ECDSA curve | P-256 | P-256 minimum | P-384 for high-security |
+| Random nonce uniqueness | 10000/10000 at 12 bytes | ~2^48 birthday bound | CSPRNG behavior confirmed |
+| Counter nonce uniqueness | 10000/10000 at 12 bytes | Deterministic | Monotonically increasing |
