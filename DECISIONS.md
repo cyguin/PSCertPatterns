@@ -113,3 +113,14 @@ Implementation matched expectations. All 21 slice 8 tests passed on first run wi
 
 ### Array::Clear on evicted keys
 When a key is evicted (retention window exceeded), `Array::Clear` zeroes the key bytes before removing the dictionary entry. The Dispose method does the same for all remaining keys. This ensures key material does not persist in process memory after it is no longer needed.
+
+## 2026-05-30 — Algorithm Agility Slice 9
+
+### No behavioral surprises
+Implementation matched expectations. All 22 slice 9 tests passed on first run with no PowerShell or .NET interop quirks.
+
+### Static constructor pattern for registry initialization
+`AlgorithmRegistry` uses a PowerShell `static` constructor (`static AlgorithmRegistry()`) to initialize the built-in `$_profiles` dictionary with the four default `CipherProfile` entries. This ensures the registry is populated on first access without requiring explicit initialization.
+
+### Mutating registry state in tests
+The `Register` and `Deprecate` tests modify the static registry state. Tests that register/deprecate profiles clean up after themselves (e.g. resetting deprecated profiles back). However, the "Register replaces an existing profile" test permanently changes the `KdfIterations` for `AES-256-GCM` from 600000 to 999999 — this is acceptable since the registry is mutable by design and later tests check for structural properties (name, algorithm) rather than exact iteration values.
