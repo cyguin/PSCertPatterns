@@ -21,15 +21,39 @@ Import-Module ./PSCertPatterns.psm1
 ## Usage
 
 ```powershell
-# AES-GCM encryption
-$encrypted = Protect-CertData -Plaintext "Hello, world!" -Certificate $cert
+using module ./PSCertPatterns.psm1
 
-# RSA sign and verify
-$signature = Sign-CertData -Data $data -Certificate $signingCert
-$valid = Verify-CertSignature -Data $data -Signature $signature -Certificate $cert
+# AES-GCM encrypt / decrypt
+$key = [byte[]]::new(32)
+$aesGcm = [AesGcmService]::new($key)
+$encrypted = $aesGcm.Encrypt([System.Text.Encoding]::UTF8.GetBytes("Hello, world!"))
+$decrypted = $aesGcm.Decrypt($encrypted)
+$aesGcm.Dispose()
 
-# Certificate chain validation
-$chain = Test-CertificateChain -Certificate $serverCert
+# PBKDF2 key derivation
+$salt = [SaltGenerator]::Generate(32)
+$derivedKey = [Pbkdf2KeyDerivation]::DeriveKey("password", $salt, 32)
+
+# AES-CBC + HMAC Encrypt-then-MAC
+$encKey = [byte[]]::new(32)
+$macKey = [byte[]]::new(32)
+$aesCbc = [AesCbcService]::new($encKey, $macKey)
+$package = $aesCbc.Encrypt([System.Text.Encoding]::UTF8.GetBytes("Hello, world!"))
+$decrypted = $aesCbc.Decrypt($package)
+$aesCbc.Dispose()
+
+# RSA encrypt / decrypt (OAEP SHA-256)
+$rsaEnc = [RsaEncryptionService]::new(2048)
+$encrypted = $rsaEnc.Encrypt([System.Text.Encoding]::UTF8.GetBytes("Hello, world!"))
+$decrypted = $rsaEnc.Decrypt($encrypted)
+$rsaEnc.Dispose()
+
+# RSA sign / verify (PSS SHA-256)
+$rsaSign = [RsaSigningService]::new(2048)
+$data = [System.Text.Encoding]::UTF8.GetBytes("message to sign")
+$signature = $rsaSign.Sign($data)
+$valid = $rsaSign.Verify($data, $signature)
+$rsaSign.Dispose()
 ```
 
 ## Test Suite
