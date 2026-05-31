@@ -65,3 +65,15 @@ Both `RsaEncryptionService` and `RsaSigningService` use a `$_hasPrivateKey` fiel
 
 ### FromPublicKey uses ImportSubjectPublicKeyInfo with [ref] out parameter
 `RSA.ImportSubjectPublicKeyInfo(byte[], out int bytesRead)` requires a by-ref out parameter in .NET. PowerShell's `[ref]$bytesRead` works correctly here, unlike the `Interlocked::Increment` case from slice 3, because `ImportSubjectPublicKeyInfo` is designed to accept a `ref` parameter (passed as `T&` by the runtime), not a `PSReference`.
+
+## 2026-05-30 — ECDSA Signing Slice 6
+
+### `ECCurve.CreateFromFriendlyName` fails on macOS
+`ECCurve.CreateFromFriendlyName("P-256")` throws `PlatformNotSupportedException` on macOS (Darwin). The friendly name "P-256" is not recognized by the Apple Security framework that backs .NET's ECDsa implementation on macOS.
+
+- **What was tried**: `CreateFromFriendlyName` with "P-256", "P-384", "P-521" — all failed
+- **What fixed it**: Used `ECCurve.CreateFromOid(Oid)` with explicit OID values:
+  - P-256 → `1.2.840.10045.3.1.7`
+  - P-384 → `1.3.132.0.34`
+  - P-521 → `1.3.132.0.35`
+- **Why it matters**: OID-based curve specification is platform-independent and guarantees cross-platform compatibility. Any future ECC work should prefer `CreateFromOid` over `CreateFromFriendlyName`.
