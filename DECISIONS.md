@@ -51,3 +51,17 @@ The `Decrypt` method verifies the MAC (via `CryptographicOperations::FixedTimeEq
 
 ### AesCbcService verifies MAC before touching AES
 The MAC input is `iv + ciphertext` (not plaintext). The `Decrypt` method splits the package, reconstructs `iv + ciphertext`, computes HMAC-SHA256, and compares with `FixedTimeEquals`. Only on success does it proceed to AES-CBC decryption. This ensures tampering is detected before any padding or plaintext data is exposed.
+
+## 2026-05-30 — RSA Encryption and Signing Slice 5
+
+### No behavioral surprises
+Implementation matched expectations. All 30 slice 5 tests passed on first run. RSA key generation via `RSA::Create(keySizeInBits)` works as expected with OAEP SHA-256 padding and PSS signatures.
+
+### Public-key-only instance pattern via `_hasPrivateKey` flag
+Both `RsaEncryptionService` and `RsaSigningService` use a `$_hasPrivateKey` field to distinguish full-key-pair instances from public-key-only instances created via `FromPublicKey`. `Decrypt` (encryption service) and `Sign` (signing service) check this flag and throw `InvalidOperationException` when the instance lacks a private key. `Encrypt` and `Verify` work on public-key-only instances without restriction.
+
+### FromPublicKey wastes a key generation
+`FromPublicKey` calls the public constructor (which generates a new RSA key pair) then immediately replaces `_rsa` and disposes the generated key. PowerShell classes do not support private constructors or parameterless constructors in a way that would allow skipping this. The overhead is ~100ms for 2048-bit and acceptable for a static factory.
+
+### FromPublicKey uses ImportSubjectPublicKeyInfo with [ref] out parameter
+`RSA.ImportSubjectPublicKeyInfo(byte[], out int bytesRead)` requires a by-ref out parameter in .NET. PowerShell's `[ref]$bytesRead` works correctly here, unlike the `Interlocked::Increment` case from slice 3, because `ImportSubjectPublicKeyInfo` is designed to accept a `ref` parameter (passed as `T&` by the runtime), not a `PSReference`.

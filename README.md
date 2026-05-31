@@ -38,7 +38,7 @@ $chain = Test-CertificateChain -Certificate $serverCert
 Invoke-Pester -Path './tests/*.Tests.ps1' -Output Detailed
 ```
 
-73 Pester tests covering all completed slices.
+103 Pester tests covering all completed slices.
 
 | Slice | File | Classes | Tests |
 |-------|------|---------|-------|
@@ -46,6 +46,7 @@ Invoke-Pester -Path './tests/*.Tests.ps1' -Output Detailed
 | 2 | src/02_KeyDerivation.ps1 | Pbkdf2KeyDerivation, SaltGenerator | 14 |
 | 3 | src/03_NonceManagement.ps1 | RandomNonceGenerator, CounterNonceGenerator | 17 |
 | 4 | src/04_HmacCbc.ps1 | AesCbcService, HmacService | 27 |
+| 5 | src/05_Rsa.ps1 | RsaEncryptionService, RsaSigningService | 30 |
 
 ## License
 
