@@ -204,3 +204,20 @@ Nonces are converted to Base64 strings (`Convert::ToBase64String`) before being 
 
 ### Null validation via NonceToKey helper
 `CheckAndRecord` and `HasSeen` delegate null validation to a shared `NonceToKey` helper method that throws `ArgumentNullException` for null nonces. This deduplicates validation logic while ensuring consistent error behavior.
+
+## Adversary Tool — Initial Implementation (2026-05-30)
+
+### GetMethod with Type[] parameter arrays fails in PowerShell
+`$type.GetMethod($name, $paramTypes)` failed because `$paramTypes` from a hashtable `@{ ParamTypes = @([byte[]]) }` was passed as `Object[]` instead of `Type[]`, resolved by .NET as `BindingFlags` instead of parameter types. Fixed by using `Get-Member` with name-only matching instead of full reflection-based signature matching.
+
+### Module-scoped classes are invisible to calling scope
+`Import-Module` and `using module` both load the `.psm1` file but do not make the classes defined inside it available in the caller's scope. The adversary tool (and all Pester tests) must dot-source the individual `src/*.ps1` files directly. The module file exists only for production import; the adversary tool documents dot-sourcing in its usage examples.
+
+### RandomNumberGenerator requires ::Fill, not ::new()
+`[System.Security.Cryptography.RandomNumberGenerator]::new()` fails because `RandomNumberGenerator` is abstract. Fill bytes via `[System.Security.Cryptography.RandomNumberGenerator]::Fill($buffer)` which is a static method in .NET 8.
+
+### Bucketed attack design
+Each battery function is independent and returns structured results with `TestName`, `Passed`, `Observed`, `Expected`, `ThresholdKey`, and `Notes` fields. The `ThresholdKey` field links results to `thresholds.json` for pass/fail floor evaluation. Results are evaluated by `Compare-Thresholds` which produces an `Evaluation` hashtable with score, counts, violations, and full findings. The Reporter then formats this as JSON or Markdown.
+
+### Static classes invisible to duck-type contract validation
+The `DeriveKey` contract cannot be verified against `[Pbkdf2KeyDerivation]` (a type literal) because `Get-Member` on a `RuntimeType` object shows `Type` members, not the static methods of the type itself. Contract validation works only against instances. Static-class contracts require the caller to adapt the target (e.g. wrapping in a proxy object). This is documented but not yet implemented.

@@ -78,6 +78,21 @@ Invoke-Pester -Path './tests/*.Tests.ps1' -Output Detailed
 | 10 | src/10_ReplayProtection.ps1 | NonceReplayGuard | 20 |
 | A | tests/00_Adversarial.Tests.ps1 | (boundary/adversarial) | 50 |
 
+## Adversary Tool (Experimental)
+
+The `adversary/` folder contains an experimental adversarial battery engine for validating cryptographic pattern implementations against documented behavioral thresholds. It is scoped to PSCertPatterns and is not a general-purpose security testing framework.
+
+See [adversary/README.md](adversary/README.md) for full documentation, supported contracts, usage, and the disclaimer you should read before running it.
+
+```powershell
+# Quick start
+. ./adversary/Invoke-AdversaryBattery.ps1
+$key = [byte[]]::new(32)
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($key)
+$svc = [AesGcmService]::new($key)
+Invoke-AdversaryBattery -Target $svc -Contract EncryptDecrypt
+```
+
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.

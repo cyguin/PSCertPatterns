@@ -1,0 +1,64 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-05-30",
+  "contracts": {
+    "EncryptDecrypt": {
+      "bitFlipDetection": {
+        "acceptable": "all_positions",
+        "description": "Every bit flip in output must cause decryption failure"
+      },
+      "nonceUniqueness": {
+        "sampleSize": 1000,
+        "acceptable": "no_collisions",
+        "collisionProbabilityAt1000": "negligible for 12-byte random nonce"
+      },
+      "zeroLengthPlaintext": {
+        "acceptable": "allowed",
+        "expectedPackageSize": 28
+      },
+      "allZeroKey": {
+        "acceptable": "allowed_no_api_restriction",
+        "note": "Caller responsibility to use strong keys"
+      }
+    },
+    "SignVerify": {
+      "crossKeyRejection": {
+        "acceptable": "always_false_never_throws"
+      },
+      "tamperedSignatureRejection": {
+        "acceptable": "always_false_never_throws"
+      }
+    },
+    "DeriveKey": {
+      "minimumIterations": {
+        "acceptable": 310000,
+        "recommended": 600000,
+        "note": "OWASP 2024 minimum for PBKDF2-SHA256"
+      },
+      "minimumSaltBytes": {
+        "acceptable": 16
+      },
+      "minimumKeyBytes": {
+        "acceptable": 16
+      }
+    },
+    "ReplayGuard": {
+      "uniquenessAt1000": {
+        "acceptable": "no_false_positives"
+      },
+      "evictionReplayability": {
+        "acceptable": "evicted_nonce_reusable",
+        "note": "Window sizing is caller responsibility"
+      }
+    },
+    "KeyRotation": {
+      "retentionWindow": {
+        "minimumRecommended": 2,
+        "note": "Window=1 means zero overlap between rotations"
+      },
+      "evictedKeyZeroing": {
+        "acceptable": "bytes_cleared_on_eviction"
+      }
+    }
+  }
+}
