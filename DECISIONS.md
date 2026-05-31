@@ -26,3 +26,14 @@ When a .NET method called via PowerShell throws an exception (e.g. `Authenticati
 
 ### No behavioral surprises
 Implementation matched expectations. All 14 tests passed on first run with no PowerShell or .NET interop quirks. The `Should -Throw -ExceptionType` pattern established in slice 1 works correctly for ArgumentException thrown directly from PowerShell code.
+
+## 2026-05-30 — Nonce Management Slice 3
+
+### `[System.Threading.Interlocked]::Increment` incompatible with `[ref]` on class fields
+`[ref]` in PowerShell creates a `PSReference` wrapper object, not a true managed by-ref pointer (`T&`). .NET methods like `Interlocked::Increment(Increment&)` require the latter and silently fail (no exception, no modification) when given a `PSReference`. Replaced with `$this._counter++`. For true concurrent scenarios, a `[System.Threading.Monitor]` / lock pattern would be needed.
+
+### PowerShell array slice returns object[], not byte[]
+`$nonce[0..7]` produces `System.Object[]`, not `System.Byte[]`. This causes `Enumerable::SequenceEqual` to fail ("Cannot find an overload"). The fix is to explicitly cast: `[byte[]]$nonce[0..7]`. This is a general PowerShell quirk — range-indexed slices lose the source array's type.
+
+### Direct bit-shift for big-endian test verification
+The incrementing nonce test reads the big-endian counter from the last 4 nonce bytes. Using `BitConverter::ToUInt32` followed by `IPAddress::NetworkToHostOrder` introduced complexity. Simplified to direct bit-shift reconstruction: `($b[0] -shl 24) -bor ($b[1] -shl 16) -bor ($b[2] -shl 8) -bor $b[3]`. This is unambiguous and avoids platform endianness concerns.
