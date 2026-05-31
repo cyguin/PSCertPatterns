@@ -38,7 +38,14 @@ $chain = Test-CertificateChain -Certificate $serverCert
 Invoke-Pester -Path './tests/*.Tests.ps1' -Output Detailed
 ```
 
-581 Pester tests covering all cryptographic operations.
+73 Pester tests covering all completed slices.
+
+| Slice | File | Classes | Tests |
+|-------|------|---------|-------|
+| 1 | src/01_AesGcm.ps1 | AesGcmService | 15 |
+| 2 | src/02_KeyDerivation.ps1 | Pbkdf2KeyDerivation, SaltGenerator | 14 |
+| 3 | src/03_NonceManagement.ps1 | RandomNonceGenerator, CounterNonceGenerator | 17 |
+| 4 | src/04_HmacCbc.ps1 | AesCbcService, HmacService | 27 |
 
 ## License
 
