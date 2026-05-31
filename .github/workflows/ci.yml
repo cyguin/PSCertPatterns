@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pester:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        psversion: ['7.4']
+    runs-on: ${{ matrix.os }}
+    name: pester-${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -Force -SkipPublisherCheck -MinimumVersion 5.0
+      - name: Run tests
+        shell: pwsh
+        run: Invoke-Pester -Path './tests/*.Tests.ps1' -Output Detailed -CI

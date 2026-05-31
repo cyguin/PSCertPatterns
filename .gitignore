@@ -1,0 +1,22 @@
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# User-specific files
+*.user
+
+# Test results
+TestResults/
+
+# Logs
+*.log
+
+# Visual Studio
+.vs/
+
+# VS Code (keep workspace settings, ignore user settings)
+.vscode/settings.json
+
+# PowerShell module artifacts
+*.ps1xml
+*.cat
