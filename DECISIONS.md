@@ -99,3 +99,17 @@ Both `RsaEncryptionService` and `RsaSigningService` use a `$_hasPrivateKey` fiel
 - **What was tried**: Explicit cast `[System.Security.Cryptography.RSA]$leafKey` — still failed
 - **What fixed it**: Calling the extension method directly as a static method on the declaring class: `[System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::CopyWithPrivateKey($signed, $leafKey)`
 - **Why it matters**: Extension method calls on platform-specific types can produce ambiguous overload resolution in PowerShell. Calling extension methods as static methods on their declaring class bypasses this ambiguity entirely.
+
+## 2026-05-30 — RotatingKeyManager Slice 8
+
+### No behavioral surprises
+Implementation matched expectations. All 21 slice 8 tests passed on first run with no PowerShell or .NET interop quirks.
+
+### Inline AES-GCM recurrence
+`RotatingKeyManager` duplicates the AES-GCM encrypt/decrypt logic from slice 1 internally rather than depending on `AesGcmService`. This preserves the one-file-per-pattern design. The inlined code uses the same `System.Security.Cryptography.AesGcm` API with 12-byte nonce, 16-byte tag, and `nonce+tag+ciphertext` package format.
+
+### Queue + Dictionary eviction pattern
+`RotatingKeyManager` uses a `Queue<string>` to track key insertion order and a `Dictionary<string, byte[]>` for key lookup by ID. Eviction dequeues the oldest key ID, clears the associated byte array via `Array::Clear`, and removes the dictionary entry. This ensures forward secrecy: once a key is evicted, its material is zeroed and unrecoverable.
+
+### Array::Clear on evicted keys
+When a key is evicted (retention window exceeded), `Array::Clear` zeroes the key bytes before removing the dictionary entry. The Dispose method does the same for all remaining keys. This ensures key material does not persist in process memory after it is no longer needed.

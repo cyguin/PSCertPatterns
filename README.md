@@ -73,6 +73,7 @@ Invoke-Pester -Path './tests/*.Tests.ps1' -Output Detailed
 | 5 | src/05_Rsa.ps1 | RsaEncryptionService, RsaSigningService | 30 |
 | 6 | src/06_Ecdsa.ps1 | EcdsaSigningService | 20 |
 | 7 | src/07_CertChain.ps1 | CertificateValidator, InMemoryPki | 18 |
+| 8 | src/08_KeyRotation.ps1 | RotatingKeyManager, EncryptedPackage | 21 |
 
 ## License
 
