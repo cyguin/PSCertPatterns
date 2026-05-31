@@ -15,7 +15,6 @@ This tool exists to validate the behavioral correctness of the cryptographic pat
 
 Do not run this against code you did not write. Do not interpret a passing score as a security guarantee. Do not use this to evaluate your bank, your employer's systems, your neighbor's NAS, or your mom's dog.
 
-The output of this tool is observational data about behavioral thresholds. It does not prove cryptographic correctness. It does not prove absence of vulnerabilities. It is a development aid for the PSCertPatterns codebase.
 ---
 
 ## Supported Contracts
