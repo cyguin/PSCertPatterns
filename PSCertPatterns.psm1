@@ -8,6 +8,7 @@ $sourceFiles = @(
     "$PSScriptRoot/src/07_CertChain.ps1"
     "$PSScriptRoot/src/08_KeyRotation.ps1"
     "$PSScriptRoot/src/09_AlgorithmAgility.ps1"
+    "$PSScriptRoot/src/10_ReplayProtection.ps1"
 )
 foreach ($f in $sourceFiles) {
     . $f

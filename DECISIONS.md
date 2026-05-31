@@ -190,3 +190,17 @@ The `Register` and `Deprecate` tests modify the static registry state. Tests tha
 | ECDSA curve | P-256 | P-256 minimum | P-384 for high-security |
 | Random nonce uniqueness | 10000/10000 at 12 bytes | ~2^48 birthday bound | CSPRNG behavior confirmed |
 | Counter nonce uniqueness | 10000/10000 at 12 bytes | Deterministic | Monotonically increasing |
+
+## 2026-05-30 — Nonce Replay Protection Slice 10
+
+### No behavioral surprises
+Implementation matched expectations. All 20 slice 10 tests passed on first run with no PowerShell or .NET interop quirks.
+
+### HashSet + Queue eviction pattern
+`NonceReplayGuard` mirrors the `RotatingKeyManager` eviction pattern from slice 8: a `HashSet<string>` for O(1) lookup and a `Queue<string>` for FIFO eviction tracking. When the set exceeds `windowSize`, the oldest entry (from queue front) is removed from both structures.
+
+### Base64 encoding for nonce storage
+Nonces are converted to Base64 strings (`Convert::ToBase64String`) before being stored in the HashSet. This avoids storing raw byte arrays as dictionary keys (which would require a custom comparer) and makes debugging/verification straightforward.
+
+### Null validation via NonceToKey helper
+`CheckAndRecord` and `HasSeen` delegate null validation to a shared `NonceToKey` helper method that throws `ArgumentNullException` for null nonces. This deduplicates validation logic while ensuring consistent error behavior.
