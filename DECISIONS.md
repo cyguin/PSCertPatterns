@@ -37,3 +37,17 @@ Implementation matched expectations. All 14 tests passed on first run with no Po
 
 ### Direct bit-shift for big-endian test verification
 The incrementing nonce test reads the big-endian counter from the last 4 nonce bytes. Using `BitConverter::ToUInt32` followed by `IPAddress::NetworkToHostOrder` introduced complexity. Simplified to direct bit-shift reconstruction: `($b[0] -shl 24) -bor ($b[1] -shl 16) -bor ($b[2] -shl 8) -bor $b[3]`. This is unambiguous and avoids platform endianness concerns.
+
+## 2026-05-30 — Encrypt-then-MAC / AES-CBC Slice 4
+
+### No behavioral surprises
+Implementation matched expectations. All 27 slice 4 tests passed on first run with no PowerShell or .NET interop quirks.
+
+### Key disposal via `Array::Clear` is by-reference
+`AesCbcService.Dispose()` calls `[System.Array]::Clear()` on the stored `$_encryptionKey` and `$_macKey` references. Since .NET arrays are reference types, this zeroes out the caller's original arrays too. This is intentional — cryptographic key material should not persist in memory after disposal. Callers must copy keys if they need them after the service is disposed.
+
+### Encrypt-then-MAC order is enforced structurally
+The `Decrypt` method verifies the MAC (via `CryptographicOperations::FixedTimeEquals`) and throws `CryptographicException` before any AES decryption call. This prevents padding-oracle attacks by never exposing decryption failure types to the caller when the MAC is invalid.
+
+### AesCbcService verifies MAC before touching AES
+The MAC input is `iv + ciphertext` (not plaintext). The `Decrypt` method splits the package, reconstructs `iv + ciphertext`, computes HMAC-SHA256, and compares with `FixedTimeEquals`. Only on success does it proceed to AES-CBC decryption. This ensures tampering is detected before any padding or plaintext data is exposed.
