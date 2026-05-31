@@ -77,3 +77,25 @@ Both `RsaEncryptionService` and `RsaSigningService` use a `$_hasPrivateKey` fiel
   - P-384 → `1.3.132.0.34`
   - P-521 → `1.3.132.0.35`
 - **Why it matters**: OID-based curve specification is platform-independent and guarantees cross-platform compatibility. Any future ECC work should prefer `CreateFromOid` over `CreateFromFriendlyName`.
+
+## 2026-05-30 — Certificate Chain Validation and InMemoryPki Slice 7
+
+### UntrustedRoot chain status persists with AllowUnknownCertificateAuthority on macOS
+`X509Chain.Build()` returns `true` for a self-signed cert with `AllowUnknownCertificateAuthority` set, but the `ChainStatus` still contains an `UntrustedRoot` entry. The chain IS built successfully — the flag prevents build failure but doesn't suppress the status report.
+
+- **What was tried**: Initially filtered chain errors naively; `AllowUntrustedRoot` tests failed
+- **What fixed it**: Added a filter in the error collection loop: `if ($AllowUntrustedRoot -and $status.Status -eq UntrustedRoot) { continue }`
+- **Why it matters**: The X509Chain API distinguishes "chain built successfully" from "chain is trusted." On macOS, trusting an untrusted root requires explicit status filtering. This pattern should be used whenever `AllowUnknownCertificateAuthority` is set.
+
+### CertificateRequest.Create() notBefore must be >= issuer's NotBefore
+`CertificateRequest.Create(issuer, notBefore, notAfter, serial)` validates that the issued cert's `notBefore` is not earlier than the issuer's `NotBefore`. The spec's "-1min" offset for clock skew caused a failure when the leaf was issued within seconds of root creation.
+
+- **What was fixed**: Clamped `notBefore` to `max(now - 1min, root.NotBefore)` before calling `Create()`
+- **Why it matters**: Certificate validity windows must always fall within the issuer's validity. Any future cert issuance logic must clamp notBefore/notAfter against the issuer's bounds.
+
+### CopyWithPrivateKey overload resolution fails on macOS for RSA
+`$cert.CopyWithPrivateKey($rsaKey)` fails on macOS because PowerShell resolves the call to the `ECDiffieHellman` overload instead of `RSA`. The macOS RSA implementation (`RSASecurityTransforms`) apparently implements interfaces that create overload ambiguity.
+
+- **What was tried**: Explicit cast `[System.Security.Cryptography.RSA]$leafKey` — still failed
+- **What fixed it**: Calling the extension method directly as a static method on the declaring class: `[System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::CopyWithPrivateKey($signed, $leafKey)`
+- **Why it matters**: Extension method calls on platform-specific types can produce ambiguous overload resolution in PowerShell. Calling extension methods as static methods on their declaring class bypasses this ambiguity entirely.

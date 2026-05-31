@@ -62,7 +62,7 @@ $rsaSign.Dispose()
 Invoke-Pester -Path './tests/*.Tests.ps1' -Output Detailed
 ```
 
-123 Pester tests covering all completed slices.
+141 Pester tests covering all completed slices.
 
 | Slice | File | Classes | Tests |
 |-------|------|---------|-------|
@@ -72,6 +72,7 @@ Invoke-Pester -Path './tests/*.Tests.ps1' -Output Detailed
 | 4 | src/04_HmacCbc.ps1 | AesCbcService, HmacService | 27 |
 | 5 | src/05_Rsa.ps1 | RsaEncryptionService, RsaSigningService | 30 |
 | 6 | src/06_Ecdsa.ps1 | EcdsaSigningService | 20 |
+| 7 | src/07_CertChain.ps1 | CertificateValidator, InMemoryPki | 18 |
 
 ## License
 
