@@ -20,3 +20,6 @@ TestResults/
 # PowerShell module artifacts
 *.ps1xml
 *.cat
+
+# Decisions
+DECISIONS.md
